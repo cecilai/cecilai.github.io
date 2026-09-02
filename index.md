@@ -1,1 +1,1 @@
-Hi welcome to my website
+Hi, I’m Cecilia. I enjoy drawing, cooking, playing sports, and working on creative projects. My experiences in school and sports have taught me about teamwork, commitment, and trying new things. I’m inspired by creativity and people who follow their interests. My goal is to keep learning, improving, and discovering what I enjoy.
