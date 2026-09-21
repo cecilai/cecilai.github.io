@@ -11,6 +11,14 @@ Here are some photos of our project and a video that tested our circuit:
 
 
 
+https://github.com/user-attachments/assets/688c62de-5134-4b22-93f5-a338fe8aff63
+
+
+
+
+
+
+
 
 
 
