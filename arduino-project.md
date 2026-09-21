@@ -1,27 +1,116 @@
 Arduino Traffic Light
 My Process
 
-I made a traffic light using an Arduino, a breadboard, a red LED, a yellow LED, a green LED, and a button. When the button is pressed, the lights turn on in order like a real traffic light. I wanted to use multiple LEDs and a button together because I wanted to see how different parts could work together in one circuit. Traffic lights are also something I see in everyday life, so I thought it would be interesting to make a simple version of one. It also gave us a chance to practice using an input to control multiple outputs.
+I made a traffic light using an Arduino, a breadboard, 3 LEDS,  and a button. When the button is pressed, the lights turn on in order like a real traffic light. I wanted to use multiple LEDs and a button together because I wanted to see how different parts could work together in one circuit. Traffic lights are also something I see in everyday life, so I thought it would be interesting to make a simple version of one. It also gave us a chance to practice using an input to control multiple outputs.
 
 The new component I worked with was the button. The button is an input because it tells the Arduino when it is pressed. We searched online to figure out how to set up the button and connect it to the circuit. I also used ChatGPT when I did not know how to write certain parts of the Arduino code. It helped me understand the parts of the code I was stuck on. While building the circuit, we had some problems with the wiring because some of the wires were in the wrong places. Elaine suggested that I check the wires, and when I looked at them, I realized that some of them were in the wrong places. We moved them to the correct places and tested the circuit again. We also had an error in our code, so we fixed that and tested it again. After making these changes, the lights started working in the correct order.
 
-Here are some photos showing how we built and tested our circuit:
+Here are some photos of our project and a video that tested our circuit:
 
-[ADD PHOTO 1 HERE]
+<img width="1080" height="1920" alt="arduino-day8-1" src="https://github.com/user-attachments/assets/cbd5c1c5-4928-4630-b4e4-ea0e64ba4d62" />
 
-[ADD PHOTO 2 HERE]
 
-[ADD PHOTO 3 HERE]
 
-[ADD PHOTO 4 HERE]
 
-[ADD PHOTO 5 HERE]
 
-Final Circuit and Code
 
-After fixing the wiring and code, our final circuit had a red LED, yellow LED, green LED, and a button connected to the Arduino on a breadboard. The button is the input, while the three LEDs are the outputs. When the button is pressed, the Arduino starts the traffic light sequence and turns the lights on in the correct order. We tested the circuit several times to make sure the button and LEDs were working together correctly.
+
+
+
+
+After fixing the wiring and code, our final led had a button connected to the Arduino on a breadboard. The button is the input, while the three LEDs are the outputs. When the button is pressed, the Arduino starts the traffic light sequence and turns the lights on in the correct order. We tested the circuit several times to make sure the button and LEDs were working together correctly.
 
 Our final code:
+const int carRed = 8;
+const int carYellow = 9;
+const int carGreen = 10;
+
+const int walkGreen = 11;
+const int walkRed = 12;
+
+const int button = 2;
+const int buzzer = 3;
+
+void setup() {
+  pinMode(carRed, OUTPUT);
+  pinMode(carYellow, OUTPUT);
+  pinMode(carGreen, OUTPUT);
+
+  pinMode(walkGreen, OUTPUT);
+  pinMode(walkRed, OUTPUT);
+
+  pinMode(button, INPUT_PULLUP);
+  pinMode(buzzer, OUTPUT);
+}
+
+void loop() {
+  // normal state
+  digitalWrite(carRed, LOW);
+  digitalWrite(carYellow, LOW);
+  digitalWrite(carGreen, HIGH);
+
+  digitalWrite(walkRed, HIGH);
+  digitalWrite(walkGreen, LOW);
+
+  noTone(buzzer);
+
+  // start crossing when the button is pressed
+  if (digitalRead(button) == LOW) {
+    delay(1000);
+
+    // cars slow down
+    digitalWrite(carGreen, LOW);
+    digitalWrite(carYellow, HIGH);
+    delay(2000);
+
+    // cars stop
+    digitalWrite(carYellow, LOW);
+    digitalWrite(carRed, HIGH);
+    delay(1000);
+
+    // pedestrians can walk
+    digitalWrite(walkRed, LOW);
+    digitalWrite(walkGreen, HIGH);
+
+    // slow chirps while walking
+    for (int i = 0; i < 4; i++) {
+      tone(buzzer, 700);
+      delay(80);
+      noTone(buzzer);
+      delay(700);
+    }
+
+    // faster warning at the end
+    for (int i = 0; i < 4; i++) {
+      digitalWrite(walkGreen, LOW);
+      tone(buzzer, 850);
+      delay(70);
+      noTone(buzzer);
+      delay(250);
+
+      digitalWrite(walkGreen, HIGH);
+      tone(buzzer, 850);
+      delay(70);
+      noTone(buzzer);
+      delay(250);
+    }
+
+    // pedestrians stop
+    digitalWrite(walkGreen, LOW);
+    digitalWrite(walkRed, HIGH);
+    noTone(buzzer);
+    delay(1000);
+
+    // cars can go again
+    digitalWrite(carRed, LOW);
+    digitalWrite(carGreen, HIGH);
+
+    // wait for the button to be released
+    while (digitalRead(button) == LOW) {
+      delay(10);
+    }
+  }
+}
 
 
 
