@@ -1,3 +1,8 @@
 Hi, I’m Cecilia. I enjoy drawing, cooking, playing sports, and working on creative projects. My experiences in school and sports have taught me about teamwork, commitment, and trying new things. I’m inspired by creativity and people who follow their interests. My goal is to keep learning, improving, and discovering what I enjoy.
 https://www.yogurtland.com/
-[2026-09-02 12-41.pdf](https://github.com/user-attachments/files/31755562/2026-09-02.12-41.pdf)
+
+[art](https://github.com/user-attachments/files/31755562/2026-09-02.12-41.pdf)
+
+[spinning 2d scanner project](spinning_2d_scanner)
+
+[arduino led light project](arduino-project)
