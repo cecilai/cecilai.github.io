@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deep Swim</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #04162b;
+    --text: #e8fbff;
+    --accent: #ffb347;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #04162b; } }
+  :root[data-theme="dark"] { --bg: #04162b; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Trebuchet MS", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #stage { position: relative; }
+  canvas { display: block; width: 100%; height: 100%; border-radius: 12px; }
+  #overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: rgba(4, 22, 43, 0.55); border-radius: 12px; padding: 20px;
+  }
+  #overlay.hidden { display: none; }
+  h1 { margin: 0 0 8px; font-size: 2.2rem; letter-spacing: 1px; }
+  p { margin: 4px 0; opacity: 0.9; }
+  button {
+    margin-top: 18px; padding: 14px 38px; font-size: 1.3rem; font-family: inherit;
+    border: 0; border-radius: 999px; background: var(--accent); color: #2a1500; cursor: pointer;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+  <div id="overlay">
+    <h1 id="title">Deep Swim</h1>
+    <p id="line1">Hold to swim up, release to sink.</p>
+    <p id="line2">Dodge the jellyfish. Collect bubbles.</p>
+    <button id="startBtn">Play</button>
+  </div>
+</div>
+
+<script>
+const W = 400, H = 640;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const stage = document.getElementById("stage");
+const overlay = document.getElementById("overlay");
+const startBtn = document.getElementById("startBtn");
+
+let bestScore = 0;
+try { bestScore = Number(localStorage.getItem("deepSwimBest")) || 0; } catch (e) {}
+
+function resize() {
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  const dpr = window.devicePixelRatio || 1;
+  stage.style.width = W * scale + "px";
+  stage.style.height = H * scale + "px";
+  canvas.width = W * scale * dpr;
+  canvas.height = H * scale * dpr;
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+let state = "ready";
+let holding = false;
+let fish, jellies, bubbles, time, bubbleCount, jellyTimer, bubbleTimer, flash, diedAt;
+
+const specks = [];
+for (let i = 0; i < 30; i++) {
+  specks.push({ x: Math.random() * W, y: Math.random() * H, r: 1 + Math.random() * 2.5, s: 0.2 + Math.random() * 0.6 });
+}
+
+function rand(min, max) { return min + Math.random() * (max - min); }
+
+function resetGame() {
+  fish = { x: 90, y: H / 2, vy: 0 };
+  jellies = [];
+  bubbles = [];
+  time = 0;
+  bubbleCount = 0;
+  jellyTimer = 1.2;
+  bubbleTimer = 0.8;
+  flash = 0;
+}
+resetGame();
+
+function startGame() {
+  resetGame();
+  state = "playing";
+  overlay.classList.add("hidden");
+}
+
+function endGame() {
+  state = "over";
+  diedAt = performance.now();
+  const score = getScore();
+  if (score > bestScore) {
+    bestScore = score;
+    try { localStorage.setItem("deepSwimBest", String(bestScore)); } catch (e) {}
+  }
+  document.getElementById("title").textContent = "Swept away!";
+  document.getElementById("line1").textContent = "Score: " + score + "  (" + bubbleCount + " bubbles)";
+  document.getElementById("line2").textContent = "Best: " + bestScore;
+  startBtn.textContent = "Replay";
+  overlay.classList.remove("hidden");
+}
+
+function getScore() { return Math.floor(time) + bubbleCount * 5; }
+
+startBtn.addEventListener("click", startGame);
+window.addEventListener("pointerdown", () => { holding = true; });
+window.addEventListener("pointerup", () => { holding = false; });
+window.addEventListener("pointercancel", () => { holding = false; });
+window.addEventListener("blur", () => { holding = false; });
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space" || e.code === "ArrowUp") {
+    e.preventDefault();
+    if (state === "playing") holding = true;
+    else if (e.code === "Space" && (state === "ready" || performance.now() - diedAt > 500)) startGame();
+  }
+});
+window.addEventListener("keyup", (e) => {
+  if (e.code === "Space" || e.code === "ArrowUp") holding = false;
+});
+
+function spawnJelly(speed) {
+  const r = rand(20, 32);
+  jellies.push({ x: W + 60, baseY: rand(70, H - 70), r: r, phase: rand(0, 6), amp: rand(10, 45), speed: speed * rand(0.9, 1.2), y: 0 });
+}
+
+function spawnBubble() {
+  bubbles.push({ x: W + 20, baseY: rand(50, H - 50), r: 10, phase: rand(0, 6), y: 0 });
+}
+
+function update(dt) {
+  const sec = dt / 60;
+  time += sec;
+  const difficulty = Math.min(time / 60, 1);
+  const speed = 2.2 + difficulty * 2.4;
+
+  if (holding) fish.vy -= 0.55 * dt; else fish.vy += 0.28 * dt;
+  fish.vy = Math.max(-6, Math.min(5, fish.vy));
+  fish.y += fish.vy * dt;
+  if (fish.y < 14) { fish.y = 14; fish.vy = 0; }
+  if (fish.y > H - 24) { fish.y = H - 24; fish.vy = 0; }
+
+  jellyTimer -= sec;
+  if (jellyTimer <= 0) { spawnJelly(speed); jellyTimer = 1.5 - difficulty * 0.8 + rand(0, 0.4); }
+  bubbleTimer -= sec;
+  if (bubbleTimer <= 0) { spawnBubble(); bubbleTimer = rand(0.9, 1.7); }
+
+  for (const j of jellies) {
+    j.x -= j.speed * dt;
+    j.phase += 0.04 * dt;
+    j.y = j.baseY + Math.sin(j.phase) * j.amp;
+    const bellHit = Math.hypot(fish.x - j.x, fish.y - j.y) < j.r * 0.9 + 9;
+    const tentacleHit = Math.hypot(fish.x - j.x, fish.y - (j.y + j.r * 0.9)) < j.r * 0.5 + 8;
+    if (bellHit || tentacleHit) endGame();
+  }
+  jellies = jellies.filter((j) => j.x > -80);
+
+  for (const b of bubbles) {
+    b.x -= speed * 0.9 * dt;
+    b.phase += 0.06 * dt;
+    b.y = b.baseY + Math.sin(b.phase) * 8;
+    b.hit = Math.hypot(fish.x - b.x, fish.y - b.y) < b.r + 14;
+    if (b.hit) { bubbleCount++; flash = 1; }
+  }
+  bubbles = bubbles.filter((b) => !b.hit && b.x > -30);
+  flash = Math.max(0, flash - 0.05 * dt);
+
+  for (const s of specks) {
+    s.y -= s.s * dt;
+    if (s.y < -5) { s.y = H + 5; s.x = Math.random() * W; }
+  }
+}
+
+function drawBackground() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "#1a7fa8");
+  grad.addColorStop(0.5, "#0b4670");
+  grad.addColorStop(1, "#04162b");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "rgba(255,255,255,0.05)";
+  for (let i = 0; i < 4; i++) {
+    const x = 40 + i * 110 + Math.sin(performance.now() / 2500 + i) * 15;
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + 50, 0); ctx.lineTo(x + 130, H); ctx.lineTo(x + 40, H);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = "rgba(190,240,255,0.35)";
+  for (const s of specks) {
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  ctx.fillStyle = "#d9b77a";
+  ctx.fillRect(0, H - 14, W, 14);
+  ctx.fillStyle = "#b8955c";
+  for (let x = 10; x < W; x += 46) ctx.fillRect(x, H - 10, 18, 4);
+}
+
+function drawJelly(j) {
+  const pulse = Math.sin(j.phase * 2) * 0.08;
+  ctx.fillStyle = "rgba(255,120,200,0.18)";
+  ctx.beginPath(); ctx.arc(j.x, j.y, j.r * 1.5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,160,220,0.9)";
+  ctx.lineWidth = 2.5;
+  for (let t = -2; t <= 2; t++) {
+    const tx = j.x + t * (j.r / 2.6);
+    ctx.beginPath();
+    ctx.moveTo(tx, j.y);
+    for (let k = 1; k <= 5; k++) {
+      ctx.lineTo(tx + Math.sin(j.phase * 2 + k + t) * 4, j.y + k * j.r * 0.4);
+    }
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#e05fb4";
+  ctx.beginPath();
+  ctx.ellipse(j.x, j.y, j.r, j.r * (0.85 + pulse), 0, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.beginPath(); ctx.arc(j.x - j.r * 0.35, j.y - j.r * 0.4, j.r * 0.18, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawBubble(b) {
+  ctx.fillStyle = "rgba(190,245,255,0.25)";
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(230,252,255,0.95)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.arc(b.x - 3, b.y - 3, 2.5, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawFish() {
+  ctx.save();
+  ctx.translate(fish.x, fish.y);
+  ctx.rotate(Math.max(-0.5, Math.min(0.5, fish.vy * 0.08)));
+  const wag = Math.sin(performance.now() / 70) * 5;
+
+  ctx.fillStyle = "#ff8a3d";
+  ctx.beginPath();
+  ctx.moveTo(-14, 0); ctx.lineTo(-30, -10 + wag); ctx.lineTo(-30, 10 + wag);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = flash > 0 ? "#fff6a8" : "#ffb347";
+  ctx.beginPath(); ctx.ellipse(0, 0, 18, 11, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#ff8a3d";
+  ctx.beginPath(); ctx.moveTo(-4, -9); ctx.lineTo(4, -17); ctx.lineTo(8, -9); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(8, -3, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#12263a";
+  ctx.beginPath(); ctx.arc(9, -3, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawHud() {
+  ctx.fillStyle = "#e8fbff";
+  ctx.font = "bold 34px 'Trebuchet MS', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(getScore(), W / 2, 48);
+  ctx.font = "16px 'Trebuchet MS', sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("Bubbles: " + bubbleCount, 14, 28);
+  ctx.textAlign = "right";
+  ctx.fillText("Best: " + bestScore, W - 14, 28);
+}
+
+let lastTime = performance.now();
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 16.667, 2);
+  lastTime = now;
+  if (state === "playing") update(dt);
+  drawBackground();
+  for (const b of bubbles) drawBubble(b);
+  for (const j of jellies) drawJelly(j);
+  drawFish();
+  if (state === "playing") drawHud();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
