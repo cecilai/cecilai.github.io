@@ -44,11 +44,10 @@ Shoes equipped with wheels that make it easier and faster to travel between plac
 
 
 Sketch 3: In-N-Out Study Dates
-<img width="640" height="469" alt="Screen Shot 2026-11-15 at 4 28 09 PM" src="https://github.com/user-attachments/assets/65ed7c80-71e5-43c5-9f10-989dab072704" />
 
 
 Friends meet at In-N-Out after school to get food, study, and spend time together. Instead of having to choose between completing homework and hanging out, they can combine the two activities. This makes it easier to maintain friendships while still being productive.
-
+<img width="640" height="469" alt="Screen Shot 2026-11-15 at 4 28 09 PM" src="https://github.com/user-attachments/assets/2220537e-9516-4045-a5a2-bb6c65315627" />
 Experiment & Path Forward
 
 I decided to experiment with the Friendship Beeping Bracelet. The idea is that two friends each have a bracelet that randomly beeps at different times throughout the day. The beeping acts as a small reminder of the other person, even when they are busy with school, sports, or other activities. They do not have to press anything or actively send a notification because the bracelet does it automatically. When someone hears their bracelet beep, it gives them a moment to think about their friend and possibly reach out to them.
