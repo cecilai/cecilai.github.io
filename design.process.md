@@ -39,6 +39,7 @@ Shoes with wheels that make it easier and faster to travel between places and me
 Sketch 3: In-N-Out Study Dates
 
 Friends meet at In-N-Out after school to eat, study, and spend time together. This combines socializing with schoolwork instead of having to choose between the two.
+[2026-11-10 17-04 (1).pdf](https://github.com/user-attachments/files/34889731/2026-11-10.17-04.1.pdf)
 
 Experiment & Path Forward 
 
